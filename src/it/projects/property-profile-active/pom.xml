@@ -21,9 +21,7 @@
     <profile>
       <id>property</id>
       <activation>
-        <property>
-          <name>line.separator</name>
-        </property>
+        <activeByDefault>true</activeByDefault>
       </activation>
       <dependencies>
         <dependency>
