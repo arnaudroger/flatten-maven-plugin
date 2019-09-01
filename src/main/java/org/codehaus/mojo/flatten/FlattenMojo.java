@@ -40,7 +40,7 @@ import org.apache.maven.model.building.ModelProblemCollector;
 import org.apache.maven.model.building.ModelProblemCollectorRequest;
 import org.apache.maven.model.interpolation.ModelInterpolator;
 import org.apache.maven.model.io.xpp3.MavenXpp3Writer;
-import org.apache.maven.model.profile.DefaultProfileSelector;
+import org.apache.maven.model.profile.DefaultProfileActivationContext;
 import org.apache.maven.model.profile.ProfileActivationContext;
 import org.apache.maven.model.profile.ProfileInjector;
 import org.apache.maven.model.profile.ProfileSelector;
@@ -73,10 +73,8 @@ import java.io.StringWriter;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
@@ -314,6 +312,9 @@ public class FlattenMojo
 
     @Component
     private DependencyResolver dependencyResolver;
+
+    @Component
+    private ProfileSelector profileSelector;
 
     @Component(role = ModelBuilder.class)
     private DefaultModelBuilder defaultModelBuilder;
@@ -889,49 +890,15 @@ public class FlattenMojo
         return flattenedDependencies;
     }
 
-    private Set<String> resolveActiveProfileIds(final Model effectiveModel, final ModelBuildingRequest modelBuildingRequest) {
-        DefaultProfileSelector selector = new DefaultProfileSelector();
+    private Set<String> resolveActiveProfileIds(final Model effectiveModel, final ModelBuildingRequest buildingRequest) {
+        DefaultProfileActivationContext context = new DefaultProfileActivationContext();
+        context.setActiveProfileIds(buildingRequest.getActiveProfileIds());
+        context.setInactiveProfileIds(buildingRequest.getInactiveProfileIds());
+        context.setSystemProperties(buildingRequest.getSystemProperties());
+        context.setUserProperties(buildingRequest.getUserProperties());
+        context.setProjectDirectory(buildingRequest.getPomFile() != null ? buildingRequest.getPomFile().getParentFile() : null);
 
-        List<Profile> activeProfiles = selector.getActiveProfiles(effectiveModel.getProfiles(), new ProfileActivationContext() {
-            @Override
-            public List<String> getActiveProfileIds() {
-                return modelBuildingRequest.getActiveProfileIds();
-            }
-
-            @Override
-            public List<String> getInactiveProfileIds() {
-                return modelBuildingRequest.getInactiveProfileIds();
-            }
-
-            @Override
-            public Map<String, String> getSystemProperties() {
-                return toMapStringString(modelBuildingRequest.getSystemProperties());
-            }
-
-            private Map<String, String> toMapStringString(Properties props) {
-                Map<String, String> map = new HashMap<String, String>();
-
-                for (Map.Entry e : props.entrySet()) {
-                    map.put(String.valueOf(e.getKey()), String.valueOf(e.getValue()));
-                }
-                return map;
-            }
-
-            @Override
-            public Map<String, String> getUserProperties() {
-                return toMapStringString(modelBuildingRequest.getUserProperties());
-            }
-
-            @Override
-            public File getProjectDirectory() {
-                return effectiveModel.getProjectDirectory();
-            }
-
-            @Override
-            public Map<String, String> getProjectProperties() {
-                return toMapStringString(effectiveModel.getProperties());
-            }
-        }, new ModelProblemCollector() {
+        List<Profile> activeProfiles = profileSelector.getActiveProfiles(effectiveModel.getProfiles(), context, new ModelProblemCollector() {
             @Override
             public void add(ModelProblemCollectorRequest modelProblemCollectorRequest) {
 
