@@ -224,6 +224,8 @@ public class FlattenMojo
     @Parameter( defaultValue = "false" )
     private Boolean embedBuildProfileDependencies;
 
+    @Parameter( defaultValue = "false" )
+    private Boolean embedAllProfileDependencies;
     /**
      * The {@link MojoExecution} used to get access to the raw configuration of {@link #pomElements} as empty tags are
      * mapped to null.
@@ -825,13 +827,20 @@ public class FlattenMojo
         return this.embedBuildProfileDependencies.booleanValue();
     }
 
+    public boolean isEmbedAllProfileDependencies()
+    {
+
+        return this.embedAllProfileDependencies.booleanValue();
+    }
+
     /**
      * @param activation is the {@link Activation} of a {@link Profile}.
      * @return <code>true</code> if the given {@link Activation} is build-time driven, <code>false</code> otherwise (if
      *         it is triggered by OS or JDK).
      */
-    protected static boolean isBuildTimeDriven( Activation activation )
+    protected boolean isBuildTimeDriven( Activation activation )
     {
+        if (isEmbedAllProfileDependencies()) return true;
 
         if ( activation == null )
         {
